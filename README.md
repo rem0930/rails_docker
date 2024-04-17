@@ -72,3 +72,21 @@ exec "$@"
 これにより、Dockerfileで指定した`CMD ["rails", "server", "-b", "0.0.0.0"]`が実行されます。
 
 これでスタート時点で必要なファイルは準備できました！
+
+
+## Ruby on Rails プロジェクトの準備
+まずdocker-compose コマンドを使って`rails new`を実行し、Railsプロジェクトを作成します。
+
+```
+docker-compose run web rails new . --force --no-deps --database=mysql --css=tailwind --skip-jbuilder --skip-action-mailbox --skip-action-mailer --skip-test
+```
+
+`docker-compose run`に続けてサービス名を指定し、さらにコンテナ内で実行したいコマンド（=rails コマンド) を続けています。また、今回はMySQLを使用するため、`--database=mysql`を指定しています。
+
+他には、`--css=tailwind` というオプションを指定しており、これにより Tailwind CSS を使うための設定が自動で行われます。
+
+`--skip-jbuilder` や `--skip-action-mailbox` などは、今回は必要がない機能をスキップするためのオプションです。
+
+コマンド実行後、`rails new` した時と同じように、ディレクトリ内に `app` や `config` などのフォルダが作成されていることが確認できると思います。
+
+
