@@ -89,4 +89,46 @@ docker-compose run web rails new . --force --no-deps --database=mysql --css=tail
 
 コマンド実行後、`rails new` した時と同じように、ディレクトリ内に `app` や `config` などのフォルダが作成されていることが確認できると思います。
 
+## Docker コンテナイメージの作成
+次は、前項で作成した Docker 関連ファイルを使って 早速コンテナイメージをビルドします。
+
+```
+docker-compose build
+```
+数分かかることがあるので、気長に待ちましょう。
+
+## MySQL データベースの準備
+次に、データベースの準備をしていきます。
+
+まずは Rails で使用しているデータベースファイルの設定を編集します。
+config ディレクトリ内の **database.yml** というファイルが対象です。
+
+```ruby:config/database.yml
+default: &default
+  adapter: mysql2
+  encoding: utf8mb4
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  username: user
+  password: password
+  host: db
+
+development:
+  <<: *default
+  database: sample_rails_development
+
+test:
+  <<: *default
+  database: sample_rails_test
+```
+
+ポイントは、`host` の欄が `db` であることです。
+
+`db` は docker-compose.yml で指定した MySQL のコンテナ名ですね。
+同じ docker-compose.yml で指定したコンテナ間であれば、 コンテナ名をホストとして名前解決してアクセスすることができます。
+
+これで Rails がデータベースと連携できるようになったので `rails db:create` コマンドを docker-compose 経由で実行して データベースを作成しておきましょう。
+
+```
+docker-compose run web rails db:create
+```
 
