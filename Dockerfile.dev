@@ -17,4 +17,4 @@ COPY entrypoint.sh /usr/bin/
 EXPOSE 3001
 
 # プロジェクト作成時はCMDをコメントアウト（コンテナが立ち上がらないため）
-# CMD ["rails", "server", "-b", "0.0.0.0"]
+CMD ["rails", "server", "-b", "0.0.0.0"]
