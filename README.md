@@ -14,9 +14,9 @@ Dockerは、「**コンテナ型の仮想環境を作成、共有、実行する
 
 <br>
 
-# サクッと作ってみた
+# 作ってみた!
 ### 任意のディレクトリを作成
-```
+```shell
 mkdir rails_docker && cd rails_docker
 ```
 
@@ -36,6 +36,31 @@ touch {Dockerfile.dev,compose.yml,.env,Gemfile,Gemfile.lock,entrypoint.sh}
 DockerfikeとはDockerイメージを構築するための設計図のようなものです。つまり、Dockerfileを編集することで環境構築できるようになります。
 
 **一つ一つのコンテナの詳細が書かれたファイル**
+
+<br>
+
+```docker:Dockerfile.dev
+FROM ruby:3.2.2
+
+# コンテナの作業ディレクトリ
+WORKDIR /app
+
+# コンテナの作業ディレクトリにコピー
+COPY Gemfile Gemfile.lock /app/
+
+# 依存関係をインストール
+RUN bundle install
+
+COPY entrypoint.sh /usr/bin/
+# プロジェクト作成時はコメントアウト（コンテナが立ち上がらないため）
+# RUN chmod +x /usr/bin/entrypoint.sh
+# ENTRYPOINT ["entrypoint.sh"]
+
+EXPOSE 3001
+
+# プロジェクト作成時はCMDをコメントアウト（コンテナが立ち上がらないため）
+# CMD ["rails", "server", "-b", "0.0.0.0"]
+```
 
 ### Dockerfileの構文
 Dockerfileは命令の引数により構成されます。一行につき一つの命令が与えられ実行する際に一行目から順番で実行されます。
@@ -66,6 +91,42 @@ Docker Composeでは、**compose.yml**と呼ばれるDockerに対する指示書
 `db`という欄でMySQLのコンテナの起動に関する設定をし、`web`という欄でRailsサービス起動に関する設定をしています。
 この`db`という名前で、後ほどRailsからMySQLにアクセスするための設定をしていきます。
 
+```yaml:compose.yml
+services:
+  web:
+    container_name: sample_app
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    # プロジェクト作成時はcommandをコメントアウト（コンテナが立ち上がらないため）
+    # command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    ports:
+      - ${RAILS_PORT}:3000 # 環境変数から参照
+    tty: true
+    # 標準入出力とエラー出力をコンテナに結びつける設定。
+    stdin_open: true
+    depends_on:
+      - db
+  # MySQLの設定
+  db:
+    container_name: sample_db
+    image: mysql:8.0
+    volumes:
+      - db-data:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DB} # 環境変数から参照
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD} # 環境変数から参照
+      TZ: "Asia/Tokyo"
+    ports:
+      - "${MYSQL_POOT}:3306" # 環境変数から参照
+volumes:
+  db-data:
+```
+
 ### Gemfile
 ```:Gemfile
 source 'https://rubygems.org'
@@ -76,12 +137,12 @@ Railsのバージョンが7であることを指定できました。
 ### entrypoint.sh の編集
 このファイルは、コンテナ起動時に実行するスクリプトを記述するためのファイルです。
 
-```bash:entrypoint.sh
+```sh:entrypoint.sh
 #!/bin/bash
 set -e
 
 # Remove a potentially pre-existing server.pid for Rails.
-rm -f /sample_rails/tmp/pids/server.pid
+rm -f /myapp/tmp/pids/server.pid
 
 # Then exec the container's main process (what's set as CMD in the Dockerfile).
 exec "$@"
@@ -99,18 +160,18 @@ docker compose build
 ```
 
 ## コンテナの起動
-```
+```shell
 docker compose up -d
 ```
 
 ## Rails プロジェクトの作成
 まずdocker-compose コマンドを使って`rails new`を実行し、Railsプロジェクトを作成します。
 
-```
+```shell
 docker-compose exec web rails new . -f -d mysql -T
 ```
 
-`docker-compose run`に続けてサービス名を指定し、さらにコンテナ内で実行したいコマンド（=rails コマンド) を続けています。
+`docker-compose exec`を使用することで、Dockerコンテナ内でコマンドを実行できます。コンテナ内で実行したいコマンド（=rails コマンド) を続けています。
 
 * -f 既存のファイルがある場合は上書き
 * -d データベースを指定(今回はMySQL)
@@ -119,7 +180,7 @@ docker-compose exec web rails new . -f -d mysql -T
 コマンド実行後、`rails new` した時と同じように、ディレクトリ内に `app` や `config` などのフォルダが作成されていることが確認できると思います。
 
 ### 生成されたDockerfileのファイル名を変更
-Rails7.1から本番用のDockerfileが自動で生成されるのでファイル名をDockerfile.prodに変更。
+Rails7.1から本番用のDockerfileが自動で生成されるので、自動生成されたファイル名を`Dockerfile.prod`に変更。
 
 
 ### MySQL データベースの準備
@@ -128,7 +189,7 @@ Rails7.1から本番用のDockerfileが自動で生成されるのでファイ�
 まずは Rails で使用しているデータベースファイルの設定を編集します。
 config ディレクトリ内の **database.yml** というファイルが対象です。
 
-```ruby:config/database.yml
+```yaml:config/database.yml
 default: &default
   adapter: mysql2
   encoding: utf8mb4
@@ -162,7 +223,7 @@ production:
 これで Rails がデータベースと連携できるようになったので `rails db:create` コマンドを docker-compose 経由で実行して データベースを作成しておきましょう。
 
 ### DBの作成
-```
+```shell
 docker-compose exec web rails db:create
 ```
 
