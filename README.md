@@ -1,134 +1,24 @@
-# Docker
+# README
 
-## Dockerとは
-Dockerは、「**コンテナ型の仮想環境を作成、共有、実行するためのプラットフォーム**」です。
+This README would normally document whatever steps are necessary to get the
+application up and running.
 
-### コンテナ is 何？
+Things you may want to cover:
 
-**コンテナとは**
-* Dockerエンジンの上に立つ一つの箱
-* 箱の中には特定したもの
-* コンテナに何を入れるか、を考える
+* Ruby version
 
-### 簡単に言うと、マシン内の入れ物に任意のものを入れられる便利な箱！！
+* System dependencies
 
-## Dockerfile
-DockerfikeとはDockerイメージを構築するための設計図のようなものです。つまり、Dockerfileを編集することで環境構築できるようになります。
+* Configuration
 
-**一つ一つのコンテナの詳細が書かれたファイル**
+* Database creation
 
-### Dockerfileの構文
-Dockerfileは命令の引数により構成されます。一行につき一つの命令が与えられ実行する際に一行目から順番で実行されます。
+* Database initialization
 
-``
-{命令} {引数}
-``
+* How to run the test suite
 
-以下が命令の一例です。
+* Services (job queues, cache servers, search engines, etc.)
 
-| 命令 | 使用用途 |
-|:---- |:------- |
-|FROM |ベースイメージを指定する|
-|RUN |コマンドを実行する|
-|CMD |コンテナの実行コマンド|
-|ENV |環境変数の指定|
-|COPY |ファイルコピー|
+* Deployment instructions
 
-## Docker Compose
-### Docker Composeの役割
-Dockerを利用した開発では複数のコンテナを起動して、コンテナ間の通信を行う必要があります。
-今回はRailsを動かすコンテナとMySQL(DB)を動かすコンテナを起動します。いちいち手動でコンテナの起動などを行うのは連携するコンテナが増えると面倒になってきます。その手間を解消するために必要となるのが、**Docker Compose**です。
-
-Docker Composeでは、**compose.yml**と呼ばれるDockerに対する指示書を作成します。Dockerはこの指示書に基づいて複数のコンテナを同時に起動します。
-**複数のコンテナを管理するファイル**
-
-### YMLファイルの構文
-`db`という欄でMySQLのコンテナの起動に関する設定をし、`web`という欄でRailsサービス起動に関する設定をしています。
-この`db`という名前で、後ほどRailsからMySQLにアクセスするための設定をしていきます。
-
-### Gemfile
-```:Gemfile
-source 'https://rubygems.org'
-gem 'rails', '~> 7.0'
-```
-Railsのバージョンが7であることを指定できました。
-
-### entrypoint.sh の編集
-このファイルは、コンテナ起動時に実行するスクリプトを記述するためのファイルです。
-
-```bash:entrypoint.sh
-#!/bin/bash
-set -e
-
-# Remove a potentially pre-existing server.pid for Rails.
-rm -f /sample_rails/tmp/pids/server.pid
-
-# Then exec the container's main process (what's set as CMD in the Dockerfile).
-exec "$@"
-```
-ここではRailsでよくある`server.pid`のエラーを回避するために、一度`server.pid`を削除しています。
-
-また、最後の`exec "$@"`は、コンテナ起動時に実行するコマンドを指定するためのものです。
-これにより、Dockerfileで指定した`CMD ["rails", "server", "-b", "0.0.0.0"]`が実行されます。
-
-これでスタート時点で必要なファイルは準備できました！
-
-
-## Ruby on Rails プロジェクトの準備
-まずdocker-compose コマンドを使って`rails new`を実行し、Railsプロジェクトを作成します。
-
-```
-docker-compose run web rails new . --force --no-deps --database=mysql --css=tailwind --skip-jbuilder --skip-action-mailbox --skip-action-mailer --skip-test
-```
-
-`docker-compose run`に続けてサービス名を指定し、さらにコンテナ内で実行したいコマンド（=rails コマンド) を続けています。また、今回はMySQLを使用するため、`--database=mysql`を指定しています。
-
-他には、`--css=tailwind` というオプションを指定しており、これにより Tailwind CSS を使うための設定が自動で行われます。
-
-`--skip-jbuilder` や `--skip-action-mailbox` などは、今回は必要がない機能をスキップするためのオプションです。
-
-コマンド実行後、`rails new` した時と同じように、ディレクトリ内に `app` や `config` などのフォルダが作成されていることが確認できると思います。
-
-## Docker コンテナイメージの作成
-次は、前項で作成した Docker 関連ファイルを使って 早速コンテナイメージをビルドします。
-
-```
-docker-compose build
-```
-数分かかることがあるので、気長に待ちましょう。
-
-## MySQL データベースの準備
-次に、データベースの準備をしていきます。
-
-まずは Rails で使用しているデータベースファイルの設定を編集します。
-config ディレクトリ内の **database.yml** というファイルが対象です。
-
-```ruby:config/database.yml
-default: &default
-  adapter: mysql2
-  encoding: utf8mb4
-  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-  username: user
-  password: password
-  host: db
-
-development:
-  <<: *default
-  database: sample_rails_development
-
-test:
-  <<: *default
-  database: sample_rails_test
-```
-
-ポイントは、`host` の欄が `db` であることです。
-
-`db` は docker-compose.yml で指定した MySQL のコンテナ名ですね。
-同じ docker-compose.yml で指定したコンテナ間であれば、 コンテナ名をホストとして名前解決してアクセスすることができます。
-
-これで Rails がデータベースと連携できるようになったので `rails db:create` コマンドを docker-compose 経由で実行して データベースを作成しておきましょう。
-
-```
-docker-compose run web rails db:create
-```
-
+* ...
