@@ -12,7 +12,27 @@ Dockerは、「**コンテナ型の仮想環境を作成、共有、実行する
 
 ### 簡単に言うと、マシン内の入れ物に任意のものを入れられる便利な箱！！
 
-## Dockerfile
+<br>
+
+# サクッと作ってみた
+### 任意のディレクトリを作成
+```
+mkdir rails_docker && cd rails_docker
+```
+
+### 必要ファイルの作成
+```bash
+touch {Dockerfile.dev,compose.yml,.env,Gemfile,Gemfile.lock,entrypoint.sh}
+```
+
+* Dockerfile.dev(DockerfileをDockerfile.devという名前で作成)
+* compose.yml
+* .env
+* Gemfile
+* Gemfile.lock
+* entrypoint.sh
+
+### Dockerfile
 DockerfikeとはDockerイメージを構築するための設計図のようなものです。つまり、Dockerfileを編集することで環境構築できるようになります。
 
 **一つ一つのコンテナの詳細が書かれたファイル**
@@ -34,24 +54,22 @@ Dockerfileは命令の引数により構成されます。一行につき一つ�
 |ENV |環境変数の指定|
 |COPY |ファイルコピー|
 
-今回は、*Dockerfile.dev*という名前でdockerfileを作成します。
 
-## Docker Compose
-### Docker Composeの役割
+### Docker Compose
 Dockerを利用した開発では複数のコンテナを起動して、コンテナ間の通信を行う必要があります。
 今回はRailsを動かすコンテナとMySQL(DB)を動かすコンテナを起動します。いちいち手動でコンテナの起動などを行うのは連携するコンテナが増えると面倒になってきます。その手間を解消するために必要となるのが、**Docker Compose**です。
 
 Docker Composeでは、**compose.yml**と呼ばれるDockerに対する指示書を作成します。Dockerはこの指示書に基づいて複数のコンテナを同時に起動します。
 **複数のコンテナを管理するファイル**
 
-### YMLファイルの構文
+### YMLファイル
 `db`という欄でMySQLのコンテナの起動に関する設定をし、`web`という欄でRailsサービス起動に関する設定をしています。
 この`db`という名前で、後ほどRailsからMySQLにアクセスするための設定をしていきます。
 
 ### Gemfile
 ```:Gemfile
 source 'https://rubygems.org'
-gem 'rails', '~> 7.0'
+gem 'rails'
 ```
 Railsのバージョンが7であることを指定できました。
 
@@ -143,6 +161,7 @@ production:
 
 これで Rails がデータベースと連携できるようになったので `rails db:create` コマンドを docker-compose 経由で実行して データベースを作成しておきましょう。
 
+### DBの作成
 ```
 docker-compose exec web rails db:create
 ```
